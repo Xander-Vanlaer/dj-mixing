@@ -2,10 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including build tools for aubio
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsndfile1 \
+    libsndfile1-dev \
+    libaubio-dev \
+    libaubio5 \
+    pkg-config \
+    gcc \
+    g++ \
+    make \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

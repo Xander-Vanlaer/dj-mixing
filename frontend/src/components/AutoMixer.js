@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Typography,
   List,
   ListItem,
@@ -29,7 +28,6 @@ const AutoMixer = ({ tracks, onMixGenerated }) => {
   const [error, setError] = useState(null);
 
   // Settings
-  const [startTrackId, setStartTrackId] = useState(null);
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [bpmTolerance, setBpmTolerance] = useState(6);
   const [energyVariation, setEnergyVariation] = useState(0.3);
@@ -52,7 +50,7 @@ const AutoMixer = ({ tracks, onMixGenerated }) => {
 
     try {
       const mixResult = await mixerAPI.generateAutoMix({
-        start_track_id: useRandomStart ? null : startTrackId,
+        start_track_id: useRandomStart ? null : null, // Could be extended to allow track selection
         duration_minutes: durationMinutes,
         bpm_tolerance: bpmTolerance,
         energy_variation: energyVariation,

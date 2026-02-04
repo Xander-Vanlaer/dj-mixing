@@ -24,9 +24,7 @@ const Deck = ({ deckId, label }) => {
 
   useEffect(() => {
     if (deck.track && audioRef.current) {
-      // Load audio file
-      const audioUrl = `/api/tracks/${deck.track.id}/audio`; // This endpoint needs to be added
-      // For now, we'll use a placeholder
+      // TODO: Load audio file from API endpoint /api/tracks/${deck.track.id}/audio
       // audioRef.current.src = audioUrl;
     }
   }, [deck.track]);

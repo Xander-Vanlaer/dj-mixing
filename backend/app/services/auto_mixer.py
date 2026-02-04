@@ -250,10 +250,14 @@ class AutoMixerService:
         else:
             overlap_duration = 16  # Default 16 seconds
         
-        # Track A mix out point in mix timeline
+        # Calculate when track A should start mixing out
+        # current_time is the end of track A in the mix timeline
+        # track_a.duration is the full length of track A
+        # track_a_points['mix_out_point'] is where track A should start fading out
+        # So we subtract the remaining portion of track A after the mix-out point
         track_a_mix_out = current_time - (track_a.duration - track_a_points['mix_out_point'])
         
-        # Track B starts during Track A outro
+        # Track B starts during Track A outro (overlap)
         track_b_start = track_a_mix_out - overlap_duration
         
         return {

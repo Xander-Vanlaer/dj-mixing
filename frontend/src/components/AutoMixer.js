@@ -50,7 +50,7 @@ const AutoMixer = ({ tracks, onMixGenerated }) => {
 
     try {
       const mixResult = await mixerAPI.generateAutoMix({
-        start_track_id: useRandomStart ? null : null, // Could be extended to allow track selection
+        start_track_id: null, // Random start - could be extended to allow specific track selection
         duration_minutes: durationMinutes,
         bpm_tolerance: bpmTolerance,
         energy_variation: energyVariation,

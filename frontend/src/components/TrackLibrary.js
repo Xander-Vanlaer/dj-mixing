@@ -13,6 +13,8 @@ import {
   IconButton,
   LinearProgress,
   Divider,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -23,13 +25,16 @@ import SpotifyImport from './SpotifyImport';
 const TrackLibrary = () => {
   const { tracks, setTracks, addTrack, removeTrack } = useMixerStore();
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
 
   const loadTracks = useCallback(async () => {
     try {
       const fetchedTracks = await tracksAPI.list();
       setTracks(fetchedTracks);
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error('Error loading tracks:', error);
+      setError(error.userMessage || 'Failed to load tracks. Please ensure the backend server is running.');
     }
   }, [setTracks]);
 
@@ -46,12 +51,15 @@ const TrackLibrary = () => {
     try {
       const newTrack = await tracksAPI.upload(file);
       addTrack(newTrack);
+      setError(null); // Clear any previous errors
       setTimeout(() => {
         setUploading(false);
       }, 1000);
     } catch (error) {
       console.error('Error uploading track:', error);
-      alert('Error uploading track. Please try again.');
+      const errorMsg = error.userMessage || 'Error uploading track. Please try again.';
+      alert(errorMsg);
+      setError(errorMsg);
       setUploading(false);
     }
   };
@@ -61,9 +69,12 @@ const TrackLibrary = () => {
       try {
         await tracksAPI.delete(trackId);
         removeTrack(trackId);
+        setError(null); // Clear any previous errors
       } catch (error) {
         console.error('Error deleting track:', error);
-        alert('Error deleting track. Please try again.');
+        const errorMsg = error.userMessage || 'Error deleting track. Please try again.';
+        alert(errorMsg);
+        setError(errorMsg);
       }
     }
   };
@@ -76,6 +87,12 @@ const TrackLibrary = () => {
 
   return (
     <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          <AlertTitle>Backend Connection Error</AlertTitle>
+          {error}
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4">Track Library</Typography>
         <Button

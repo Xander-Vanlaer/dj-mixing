@@ -1,8 +1,7 @@
 import axios from 'axios';
 
 // Determine API URL based on environment
-// In Docker: use 'backend' service name
-// In local dev: use localhost
+// Frontend runs in browser, so use localhost or production domain
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const apiClient = axios.create({
@@ -36,11 +35,13 @@ apiClient.interceptors.response.use(
     } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       errorMessage = `Unable to connect to backend server at ${API_URL}.\n\n` +
         'Please ensure:\n' +
-        '1. The backend server is running (try: npm run dev-backend or docker-compose up)\n' +
+        '1. The backend server is running\n' +
         '2. The backend is accessible at the configured URL\n' +
         '3. Check REACT_APP_API_URL environment variable\n\n' +
-        'For Docker: Use http://backend:8000\n' +
-        'For local dev: Use http://localhost:8000';
+        'To start backend:\n' +
+        '• Docker: docker-compose up -d backend\n' +
+        '• Local dev: ./start-dev.sh\n\n' +
+        'Default API URL: http://localhost:8000';
     } else if (error.response) {
       // Server responded with error status
       const status = error.response.status;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -11,55 +11,48 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   LinearProgress,
+  Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import useMixerStore from '../contexts/mixerStore';
 import { tracksAPI } from '../services/api';
+import SpotifyImport from './SpotifyImport';
 
 const TrackLibrary = () => {
   const { tracks, setTracks, addTrack, removeTrack } = useMixerStore();
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
-  useEffect(() => {
-    loadTracks();
-  }, []);
-
-  const loadTracks = async () => {
+  const loadTracks = useCallback(async () => {
     try {
       const fetchedTracks = await tracksAPI.list();
       setTracks(fetchedTracks);
     } catch (error) {
       console.error('Error loading tracks:', error);
     }
-  };
+  }, [setTracks]);
+
+  useEffect(() => {
+    loadTracks();
+  }, [loadTracks]);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     setUploading(true);
-    setUploadProgress(0);
 
     try {
       const newTrack = await tracksAPI.upload(file);
       addTrack(newTrack);
-      setUploadProgress(100);
       setTimeout(() => {
         setUploading(false);
-        setUploadProgress(0);
       }, 1000);
     } catch (error) {
       console.error('Error uploading track:', error);
       alert('Error uploading track. Please try again.');
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -164,6 +157,10 @@ const TrackLibrary = () => {
           Total tracks: {tracks.length}
         </Typography>
       </Box>
+
+      {/* Spotify Import Section */}
+      <Divider sx={{ my: 4 }} />
+      <SpotifyImport onImportComplete={loadTracks} />
     </Box>
   );
 };

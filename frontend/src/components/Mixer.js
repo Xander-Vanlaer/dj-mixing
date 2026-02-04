@@ -1,9 +1,10 @@
 import React from 'react';
 import { Box, Typography, Slider, Divider } from '@mui/material';
 import useMixerStore from '../contexts/mixerStore';
+import AutoMixer from './AutoMixer';
 
 const Mixer = () => {
-  const { crossfader, masterVolume, eqA, eqB, setCrossfader, setMasterVolume, setEQ } =
+  const { crossfader, masterVolume, eqA, eqB, setCrossfader, setMasterVolume, setEQ, tracks } =
     useMixerStore();
 
   return (
@@ -11,6 +12,9 @@ const Mixer = () => {
       <Typography variant="h6" align="center">
         Mixer
       </Typography>
+
+      {/* Auto-Mix Button */}
+      <AutoMixer tracks={tracks} onMixGenerated={(mix) => console.log('Mix generated:', mix)} />
 
       {/* EQ Deck A */}
       <Box>

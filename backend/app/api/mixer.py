@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.core.database import get_db
 from app.models.models import Mix, Track
-from app.schemas.schemas import MixCreate, MixResponse
+from app.schemas.schemas import MixCreate, MixResponse, AutoMixRequest, AutoMixResponse
+from app.services.auto_mixer import AutoMixerService
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/mixes", response_model=MixResponse)
 async def create_mix(mix: MixCreate, db: Session = Depends(get_db)):
@@ -62,36 +65,39 @@ async def delete_mix(mix_id: int, db: Session = Depends(get_db)):
     
     return {"message": "Mix deleted successfully"}
 
-@router.post("/auto-mix")
+@router.post("/auto-mix", response_model=AutoMixResponse)
 async def generate_auto_mix(
-    seed_tracks: List[int],
-    duration_minutes: int = 60,
-    mood: str = "energetic",
+    request: AutoMixRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Generate an automatic mix based on seed tracks and preferences
-    This is a simplified version - full implementation would use ML/AI
+    Generate an automatic mix based on preferences
+    Uses intelligent track selection based on BPM, key compatibility, and energy levels
     """
-    # Get seed tracks
-    seeds = db.query(Track).filter(Track.id.in_(seed_tracks)).all()
-    if not seeds:
-        raise HTTPException(status_code=404, detail="Seed tracks not found")
-    
-    # For MVP, just return the seed tracks in order
-    # TODO: Implement intelligent track selection and ordering
-    tracklist = [
-        {
-            'track_id': track.id,
-            'start_time': idx * 180,  # 3 min per track for now
-            'title': track.title,
-            'artist': track.artist
-        }
-        for idx, track in enumerate(seeds)
-    ]
-    
-    return {
-        "suggested_tracklist": tracklist,
-        "total_duration": len(tracklist) * 180,
-        "mood": mood
-    }
+    try:
+        logger.info(f"Generating auto-mix: {request.dict()}")
+        
+        # Generate the auto-mix
+        result = AutoMixerService.generate_auto_mix(
+            db=db,
+            start_track_id=request.start_track_id,
+            target_duration_minutes=request.duration_minutes,
+            bpm_tolerance=request.bpm_tolerance,
+            energy_variation=request.energy_variation
+        )
+        
+        logger.info(f"Auto-mix generated: {result['track_count']} tracks")
+        
+        return AutoMixResponse(
+            tracklist=result['tracklist'],
+            transitions=result['transitions'],
+            total_duration=result['total_duration'],
+            track_count=result['track_count'],
+            metadata=result['metadata']
+        )
+    except ValueError as e:
+        logger.error(f"Auto-mix generation failed: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Auto-mix generation error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate auto-mix")

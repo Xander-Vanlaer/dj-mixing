@@ -7,11 +7,17 @@ import shutil
 from mutagen import File as MutagenFile
 from app.core.database import get_db
 from app.models.models import Track, TrackAnalysis, CuePoint
-from app.schemas.schemas import TrackResponse, TrackCreate, CuePointCreate, CuePointResponse
+from app.schemas.schemas import (
+    TrackResponse, TrackCreate, CuePointCreate, CuePointResponse,
+    SpotifyImportRequest, SpotifyImportResponse
+)
 from app.services.audio_analysis import AudioAnalysisService
+from app.services.spotify_integration import SpotifyIntegrationService
 from app.core.config import settings
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'.mp3', '.wav', '.flac', '.aac', '.m4a'}
 
@@ -170,3 +176,70 @@ async def get_track_audio(track_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Audio file not found")
     
     return FileResponse(track.file_path, media_type="audio/mpeg")
+
+@router.post("/import/spotify", response_model=SpotifyImportResponse)
+async def import_from_spotify(
+    request: SpotifyImportRequest,
+    db: Session = Depends(get_db)
+):
+    """Import tracks from Spotify playlist, album, or track"""
+    try:
+        # Initialize Spotify service
+        spotify_service = SpotifyIntegrationService()
+        
+        # Import tracks from Spotify
+        spotify_tracks = spotify_service.import_from_url(request.url)
+        
+        if not spotify_tracks:
+            raise HTTPException(status_code=404, detail="No tracks found at the provided URL")
+        
+        imported_count = 0
+        matched_count = 0
+        errors = []
+        
+        # Try to match with existing local tracks if requested
+        if request.match_local:
+            for track_info in spotify_tracks:
+                try:
+                    # Search for existing track by title and artist
+                    existing_track = db.query(Track).filter(
+                        Track.title.ilike(f"%{track_info['title']}%"),
+                        Track.artist.ilike(f"%{track_info['artist']}%")
+                    ).first()
+                    
+                    if existing_track:
+                        # Update existing track with Spotify metadata
+                        if track_info.get('bpm') and not existing_track.bpm:
+                            existing_track.bpm = track_info['bpm']
+                        if track_info.get('key') and not existing_track.key:
+                            existing_track.key = track_info['key']
+                        if track_info.get('energy') and not existing_track.energy:
+                            existing_track.energy = track_info['energy']
+                        
+                        db.commit()
+                        matched_count += 1
+                        logger.info(f"Matched Spotify track: {track_info['title']}")
+                    else:
+                        logger.info(f"No local match for: {track_info['title']}")
+                
+                except Exception as e:
+                    error_msg = f"Error matching {track_info.get('title', 'unknown')}: {str(e)}"
+                    errors.append(error_msg)
+                    logger.error(error_msg)
+        
+        imported_count = len(spotify_tracks)
+        
+        logger.info(f"Spotify import complete: {imported_count} tracks, {matched_count} matched")
+        
+        return SpotifyImportResponse(
+            imported_count=imported_count,
+            matched_count=matched_count,
+            tracks=spotify_tracks,
+            errors=errors
+        )
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Spotify import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Spotify import failed: {str(e)}")

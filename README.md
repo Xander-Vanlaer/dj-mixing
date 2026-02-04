@@ -182,6 +182,37 @@ npm install
 npm start
 ```
 
+### Running in Development Mode (Alternative)
+
+For local development without Docker:
+
+1. **Start Backend Services** (PostgreSQL and Redis):
+```bash
+# Option 1: Use Docker for services only
+docker-compose up -d db redis
+
+# Option 2: Install and run locally
+# Install PostgreSQL and Redis, then start them
+```
+
+2. **Start Backend**:
+```bash
+./start-dev.sh
+# Or manually:
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+3. **Start Frontend** (in separate terminal):
+```bash
+cd frontend
+npm install
+npm start
+```
+
 ### Database Migrations
 
 ```bash
@@ -189,18 +220,160 @@ cd backend
 alembic upgrade head
 ```
 
+## Troubleshooting
+
+### Network Errors (ERR_EMPTY_RESPONSE, ERR_CONNECTION_ABORTED)
+
+If you see errors like:
+```
+Error loading tracks: AxiosError: Network Error
+Failed to load resource: net::ERR_EMPTY_RESPONSE
+```
+
+**This means the frontend cannot connect to the backend API.**
+
+#### Quick Fix
+
+1. **Verify backend is running**:
+```bash
+# Check health status
+./check-backend.sh
+
+# Or manually:
+curl http://localhost:8000/health
+```
+
+2. **Start the backend** if not running:
+```bash
+# With Docker:
+docker-compose up -d backend
+
+# Or in development mode:
+./start-dev.sh
+```
+
+3. **Check backend logs**:
+```bash
+# Docker:
+docker-compose logs backend
+
+# Development mode: Check terminal where uvicorn is running
+```
+
+#### Detailed Troubleshooting
+
+**1. Backend Not Running**
+- Check if backend process is active:
+  - Docker: `docker-compose ps` (backend should be "Up")
+  - Local: `ps aux | grep uvicorn`
+- Start backend using one of the methods above
+
+**2. Wrong API URL**
+- Frontend connects to backend via `REACT_APP_API_URL`
+- Check `.env` file has correct value:
+  - For Docker/Local: `REACT_APP_API_URL=http://localhost:8000`
+  - For Production: Use your actual domain
+- Restart frontend after changing `.env`
+
+**3. Port Conflicts**
+- Backend needs port 8000 free
+- Check what's using port 8000: `lsof -i :8000` or `netstat -an | grep 8000`
+- Stop conflicting process or change backend port
+
+**4. Docker Networking Issues**
+- Ensure services are running: `docker-compose ps`
+- Restart services: `docker-compose restart`
+- Check logs: `docker-compose logs -f backend`
+
+**5. Firewall/Network Issues**
+- Ensure ports 3000 (frontend) and 8000 (backend) are accessible
+- Try accessing backend directly: http://localhost:8000/docs
+
+**6. Database Connection Issues**
+- Backend needs PostgreSQL and Redis to start
+- Check database: `docker-compose ps db` or `pg_isready -h localhost`
+- Check Redis: `docker-compose ps redis` or `redis-cli ping`
+- Start missing services: `docker-compose up -d db redis`
+
+### Other Common Issues
+
+**"Module not found" errors**
+```bash
+# Reinstall dependencies
+cd frontend && npm install
+cd backend && pip install -r requirements.txt
+```
+
+**"Permission denied" errors**
+```bash
+# Make scripts executable
+chmod +x start-dev.sh check-backend.sh setup.sh
+```
+
+**"Database migration failed"**
+```bash
+# Reset and rerun migrations
+cd backend
+alembic downgrade base
+alembic upgrade head
+```
+
+**Docker issues**
+```bash
+# Rebuild containers
+docker-compose down
+docker-compose build
+docker-compose up -d
+
+# Clean restart (WARNING: deletes data)
+docker-compose down -v
+docker-compose up -d
+```
+
 ## Configuration
 
 ### Environment Variables
 
-See `.env.example` for all available configuration options:
+See `.env.example` for all available configuration options.
 
-- `POSTGRES_DB`: Database name
-- `POSTGRES_USER`: Database user
-- `POSTGRES_PASSWORD`: Database password
-- `SECRET_KEY`: Application secret key
-- `SPOTIFY_CLIENT_ID`: Spotify API credentials (optional)
-- `SPOTIFY_CLIENT_SECRET`: Spotify API credentials (optional)
+**Key Variables:**
+- `REACT_APP_API_URL`: Frontend API endpoint (default: http://localhost:8000)
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: Database credentials
+- `SECRET_KEY`: Application secret key (generate with: `openssl rand -hex 32`)
+- `UPLOAD_DIR`: Directory for uploaded audio files
+- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: Optional Spotify integration
+
+**Important:** After changing environment variables, restart the services:
+```bash
+# Docker:
+docker-compose restart
+
+# Development mode:
+# Restart both frontend and backend processes
+```
+
+## Useful Commands
+
+```bash
+# Health check
+./check-backend.sh                 # Verify backend is running
+
+# Development mode
+./start-dev.sh                     # Start backend in dev mode
+
+# Docker management
+docker-compose ps                  # Check service status
+docker-compose logs -f backend     # View backend logs
+docker-compose logs -f frontend    # View frontend logs
+docker-compose restart             # Restart all services
+docker-compose down                # Stop all services
+docker-compose down -v             # Stop and remove data (WARNING!)
+
+# Database
+docker-compose exec db psql -U djuser -d djmixing  # PostgreSQL shell
+make backup-db                     # Backup database
+make restore-db                    # Restore database
+```
 
 ## Roadmap
 

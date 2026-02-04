@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean test
+.PHONY: help build up down restart logs clean test check-health
 
 help: ## Show this help message
 	@echo "DJ Mixing Platform - Available Commands:"
@@ -33,6 +33,9 @@ logs-frontend: ## Show frontend logs
 status: ## Show service status
 	docker-compose ps
 
+check-health: ## Check backend health status
+	@./check-backend.sh
+
 shell-backend: ## Open shell in backend container
 	docker-compose exec backend /bin/bash
 
@@ -59,11 +62,16 @@ install: ## Initial setup - create .env and build
 	make build
 	@echo "Installation complete. Run 'make up' to start."
 
-dev-backend: ## Run backend in development mode
-	cd backend && uvicorn app.main:app --reload
+dev-backend: ## Run backend in development mode (local)
+	@./start-dev.sh
 
-dev-frontend: ## Run frontend in development mode
+dev-frontend: ## Run frontend in development mode (local)
 	cd frontend && npm start
+
+dev: ## Start backend services only (use with local dev)
+	docker-compose up -d db redis
+	@echo "Database and Redis started for local development"
+	@echo "Run 'make dev-backend' and 'make dev-frontend' in separate terminals"
 
 test-backend: ## Run backend tests
 	cd backend && pytest

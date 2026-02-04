@@ -45,6 +45,14 @@ export const tracksAPI = {
     const response = await apiClient.get(`/api/tracks/${trackId}/cue-points`);
     return response.data;
   },
+  
+  importFromSpotify: async (url, matchLocal = true) => {
+    const response = await apiClient.post('/api/tracks/import/spotify', {
+      url,
+      match_local: matchLocal,
+    });
+    return response.data;
+  },
 };
 
 export const analysisAPI = {

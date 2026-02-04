@@ -16,11 +16,13 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
+  Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import useMixerStore from '../contexts/mixerStore';
 import { tracksAPI } from '../services/api';
+import SpotifyImport from './SpotifyImport';
 
 const TrackLibrary = () => {
   const { tracks, setTracks, addTrack, removeTrack } = useMixerStore();
@@ -164,6 +166,10 @@ const TrackLibrary = () => {
           Total tracks: {tracks.length}
         </Typography>
       </Box>
+
+      {/* Spotify Import Section */}
+      <Divider sx={{ my: 4 }} />
+      <SpotifyImport onImportComplete={loadTracks} />
     </Box>
   );
 };
